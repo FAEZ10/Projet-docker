@@ -1,0 +1,67 @@
+version: '3'
+
+services:
+  php:
+    build:
+      args:
+        user: root
+        uid: 0
+      context: .
+      dockerfile: Dockerfile.php
+    restart: unless-stopped
+    working_dir: /var/www/
+    volumes:
+      - ./app:/var/www
+    networks:
+      - reseau
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - 80:80
+    volumes:
+      - ./app:/var/www
+      - ./conf:/etc/nginx/conf.d/
+    networks:
+      - reseau
+
+  composer:
+    build:
+      context: .
+      dockerfile: Dockerfile.composer
+    volumes:
+      - ./app:/app
+    working_dir: /app 
+    depends_on:
+      - php
+
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=test
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+    ports:
+      - "5430:5432" 
+    volumes:
+      - ./db_data:/var/lib/postgresql/data
+    networks: 
+      - reseau
+
+  adminer:
+    build: 
+      context: .
+      dockerfile: Dockerfile.adminer
+    ports: 
+      - 8082:8082
+    volumes: 
+      - ./adminer:/var/www/html
+    networks: 
+      - reseau
+
+networks:
+ reseau:
+    driver: bridge
